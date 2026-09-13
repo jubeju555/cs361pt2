@@ -8,8 +8,7 @@
 #include "eir_common.h"
 #include "eba_common.h"
 
-
-void test_solofile(char *, void*);
+void test_solofile(char *, void *);
 
 int main(void)
 {
@@ -56,16 +55,13 @@ void cleanup_demo(void *eba_arg)
 {
    EIR_data_t *gd = get_eba_arg(eba_arg, 1);
 
-
    pthread_mutex_destroy(&interpreter_lock);
 
    free_dlhandlers();
 
-
    void *next_eba_arg = init_eba_arg(2);
    set_eba_arg(next_eba_arg, 0, gd->opls[1]);
    set_eba_arg(next_eba_arg, 1, gd);
-
 
    eba_args[0] = next_eba_arg; // cleanup
 }
@@ -108,5 +104,5 @@ void test_solofile(char *fname, void *eba_arg)
 
    free_later(gd, gd->stored_arg);
 
-   eba_args[0] = (void*)arg_buf;
+   eba_args[0] = (void *)arg_buf;
 }
