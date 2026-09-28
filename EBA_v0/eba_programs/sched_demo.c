@@ -9,7 +9,7 @@
 void prog_entry(void* args)
 {
    free_eba_arg(args);
-   printf("scheduler demo: writing length of scheduler queue to write_length.log.\n");
+   printf("scheduler demo: writing length of scheduler queue to write_length.csv.\n");
 
    // checking an assumption
    if (sizeof(void*) < sizeof(FILE*))
@@ -36,11 +36,12 @@ void prog_entry(void* args)
    // add the length checker
    op_loader_t *write_length_opl = opl_init("eba_programs/fifo_sched/write_length.so", "write_length");
 
-   void *wl_arg = init_eba_arg(3);
+   void *wl_arg = init_eba_arg(4);
    set_eba_arg(wl_arg, 0, write_length_opl);
    set_eba_arg(wl_arg, 1, fs);
-   FILE *logf = fopen("write_length.log", "w");
+   FILE *logf = fopen("write_length.csv", "w");
    set_eba_arg(wl_arg, 2, logf);
+   set_eba_arg(wl_arg, 3, NULL);
 
    void *add_wl_to_sched_args = init_eba_arg(3);
    set_eba_arg(add_wl_to_sched_args, 0, fs->add_opl);
@@ -76,6 +77,7 @@ void prog_entry(void* args)
    opl_destroy(fs_main_opl);
    opl_destroy(fs_init_opl);
    opl_destroy(noiser_opl);
+   opl_destroy(write_length_opl);
    free_eba_arg(fs_main_arg);
    free_eba_arg(fs_init_arg);
 }
