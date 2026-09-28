@@ -21,41 +21,18 @@ void sched_noise(void* args)
 
    int i;
    int new_progs = 0;
-   int do_logistic = 0;
    // technically, this is not even fully pseudorandom.
    // there is some rounding error near RAND_MAX since there exists many
    // X such that RAND_MAX%X!=0.
    // for this pedagogical example, we will ignore this.
-   if (do_logistic)
-   {
-      int r1 = rand()%PASS_LENGTH;
-      int r2 = rand()%PASS_LENGTH;
-      // for a logisticly scaling and decreasing "spike" of program activity
-      if (r1*2 > iter-PASS_LENGTH/2 && iter < PASS_LENGTH)
-      {
-         // For the first PASS_LENGTH/2 iterations, always respawn. After that,
-         // a growing chance not to respawn eventually reaching 25 when iter=PASS_LENGTH-1
-         // and always disallowed after PASSLENGTH
-         new_progs += 1;
-         // printf("Yes: we should respawn\n");
-      }
-      if (r2 >= iter+PASS_LENGTH/2)
-      {
-         // a chance to duplicate the program, starting at 50% and decreasing to 0%
-         new_progs += 1;
-         // printf("Yes: we should duplicate\n");
-      }
-   }
-   else
-   {
-      // for a highly noisy environment that may have many, or very few operations.
-      if (iter < PASS_LENGTH)
-      {
-         int r1 = rand()%NOISE_CAP;
-         int r2 = rand()%NOISE_CAP;
 
-         new_progs = 1+r1+r2;
-      }
+   // for a highly noisy environment that may have many, or very few operations.
+   if (iter < PASS_LENGTH)
+   {
+      // imagine just rolling two dice to keep the noise slightly lower
+      int r1 = rand()%NOISE_CAP;
+      int r2 = rand()%NOISE_CAP;
+      new_progs = 1+r1+r2;
    }
 
    for(i = 0; i < new_progs; i++)
@@ -65,11 +42,8 @@ void sched_noise(void* args)
       set_eba_arg(my_next_iter, 0, get_eba_arg(args, 0));
       set_eba_arg(my_next_iter, 1, fs);
       int64_t *next_iterp = malloc(sizeof(int64_t));
-      *next_iterp = iter+1;
-      if (!do_logistic)
-      {
-         *next_iterp += (i>0)*PASS_LENGTH;
-      }
+      *next_iterp = iter+1; // only let the first one reproduce
+      *next_iterp += (i>0)*PASS_LENGTH; // others will have iter being too high.
       set_eba_arg(my_next_iter, 2, next_iterp);
 
 
