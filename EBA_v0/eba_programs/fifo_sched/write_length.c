@@ -38,9 +38,23 @@ void write_length(void *args)
 
 
    int sched_length;
-   // MISSING: calculate the length of the FIFO scheduler's queue. Your code
-   // goes here: and no, sched_length is not always 10.
-   sched_length = 10;
+   sched_length = 0;
+
+   void **arg_block = fs->arg_block_next;
+   uint64_t block_idx = fs->next_idx;
+   while (arg_block != fs->arg_block_end)
+   {
+      // The last slot in every non-final block contains the operation that
+      // advances the scheduler to the next block, rather than a queued item.
+      sched_length += (SCHED_BUF_LENGTH - 1) - block_idx;
+
+      void *last_arg = arg_block[SCHED_BUF_LENGTH - 1];
+      arg_block = get_eba_arg(last_arg, 3);
+      block_idx = 0;
+   }
+
+   // The final block only has queued items through end_idx.
+   sched_length += fs->end_idx - block_idx;
 
    // now write the length to file
    fprintf(logf, "%lu,%d\n", usec_elapsed, sched_length);
