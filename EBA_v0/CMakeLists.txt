@@ -42,6 +42,6 @@ target_link_libraries(eba
 )
 
 
+add_subdirectory(eba_core)
 add_subdirectory(eba_boot)
 add_subdirectory(eba_programs)
-
