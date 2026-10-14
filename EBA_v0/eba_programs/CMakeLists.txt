@@ -15,7 +15,6 @@ set_target_properties(hello_world
 
 target_link_libraries(hello_world
    PRIVATE
-      eba_core
       eba_common # links to eba_common
       ${CMAKE_DL_LIBS})
 
@@ -34,7 +33,6 @@ set_target_properties(sched_demo
 target_link_libraries(sched_demo
    PRIVATE
       fifo_sched
-      eba_core
       eba_common # links to eba_common
       ${CMAKE_DL_LIBS}
 )

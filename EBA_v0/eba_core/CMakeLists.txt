@@ -25,13 +25,13 @@ target_link_libraries(eba_bufreq
 
 
 
-add_library(eba_core
-   INTERFACE
-)
-
-target_link_libraries(eba_core
-   INTERFACE
-      eba_common
-      eba_bufreq
-      ${CMAKE_DL_LIBS}
-)
+# add_library(eba_core
+   # INTERFACE
+# )
+# 
+# target_link_libraries(eba_core
+   # INTERFACE
+      # eba_common
+      # eba_bufreq
+      # ${CMAKE_DL_LIBS}
+# )
