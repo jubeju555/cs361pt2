@@ -16,8 +16,14 @@ struct fifo_sched
    uint64_t next_idx;
    void ** arg_block_end;
    uint64_t end_idx;
+   // Assignment 2: keep the queue size available for constant-time updates.
+   uint64_t queue_length;
+   // Assignment 2: assign stable IDs to newly created continuation chains.
+   uint64_t next_thread_id;
    op_loader_t *add_opl;
    op_loader_t *last_opl;
+   // Assignment 2: shared log for timestamped scheduling events.
+   FILE *schedule_log;
 };
 typedef struct fifo_sched fifo_sched_t;
 

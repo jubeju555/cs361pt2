@@ -36,12 +36,17 @@ void prog_entry(void* args)
    // add the length checker
    op_loader_t *write_length_opl = opl_init("eba_programs/fifo_sched/write_length.so", "write_length");
 
-   void *wl_arg = init_eba_arg(4);
+   // Assignment 2: add a thread-ID slot and keep the elapsed-time slot.
+   void *wl_arg = init_eba_arg(5);
    set_eba_arg(wl_arg, 0, write_length_opl);
    set_eba_arg(wl_arg, 1, fs);
    FILE *logf = fopen("write_length.csv", "w");
    set_eba_arg(wl_arg, 2, logf);
-   set_eba_arg(wl_arg, 3, NULL);
+   set_eba_arg(wl_arg, 3, (void *)(uintptr_t)0);
+   set_eba_arg(wl_arg, 4, NULL);
+   // Assignment 2: each scheduler dequeue appends timestamp,thread_id.
+   fs->schedule_log = fopen("schedule_log.csv", "w");
+   fprintf(fs->schedule_log, "wall_clock_timestamp,thread_id\n");
 
    void *add_wl_to_sched_args = init_eba_arg(3);
    set_eba_arg(add_wl_to_sched_args, 0, fs->add_opl);
@@ -52,12 +57,14 @@ void prog_entry(void* args)
    // set up the noiser
    op_loader_t *noiser_opl = opl_init("eba_programs/fifo_sched/sched_noise.so", "sched_noise");
 
-   void *noiser_arg = init_eba_arg(3);
+   // Assignment 2: the noiser carries the ID of its continuation chain.
+   void *noiser_arg = init_eba_arg(4);
    set_eba_arg(noiser_arg, 0, noiser_opl);
    set_eba_arg(noiser_arg, 1, fs);
    int64_t *noiser_iterp = malloc(sizeof(int64_t));
    *noiser_iterp = 0;
    set_eba_arg(noiser_arg, 2, noiser_iterp);
+   set_eba_arg(noiser_arg, 3, (void *)(uintptr_t)fs->next_thread_id++);
 
    void *add_to_sched_args = init_eba_arg(3);
    set_eba_arg(add_to_sched_args, 0, fs->add_opl);
@@ -81,4 +88,3 @@ void prog_entry(void* args)
    free_eba_arg(fs_main_arg);
    free_eba_arg(fs_init_arg);
 }
-

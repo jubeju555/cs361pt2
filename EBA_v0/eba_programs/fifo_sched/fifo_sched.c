@@ -1,6 +1,8 @@
 #include "eba_common.h"
 #include "fifo_sched_common.h"
 
+#include <sys/time.h>
+
 // creates a FIFO scheduler with no interrupts and unlimited wait queue.
 
 // options: will we do A or B?
@@ -26,6 +28,10 @@ void sched_init(void *args)
    fs->arg_block_end = fs->arg_block_next;
    fs->next_idx = 0;
    fs->end_idx = 0;
+   // Assignment 2: initialize the queue counter, thread IDs, and event log.
+   fs->queue_length = 0;
+   fs->next_thread_id = 1;
+   fs->schedule_log = NULL;
    fs->add_opl = opl_init("eba_programs/fifo_sched/fifo_sched.so", "add_to_sched");
    fs->last_opl = opl_init("eba_programs/fifo_sched/fifo_sched.so", "last_entry_in_buf");
    
@@ -66,32 +72,17 @@ void add_to_sched(void *args)
    // 2: the arg buf to add to the scheduler
    fifo_sched_t *fs = get_eba_arg(args, 1);
    void *add_me = get_eba_arg(args, 2);
-   if (fs->arg_block_end[fs->end_idx] == NULL)
-   {
-      // then all is well. Add it in.
-      fs->arg_block_end[fs->end_idx] = add_me;
-      fs->end_idx += 1;
-   }
-   else
-   {
-      // then instead of adding it in, we'll add it in in a NEW block
-      // for error check, we will assert here
-      if (fs->end_idx != SCHED_BUF_LENGTH-1)
-      {
-         fprintf(stderr, "there's been a scheduling error. Add conflict "
-                 "should only occur at end of block\n");
-         // sched_print(fs);
-         exit(1);
-      }
-      void *last_entry_arg_buf = fs->arg_block_end[fs->end_idx];
-      
-      void **new_buf = calloc(SCHED_BUF_LENGTH,sizeof(void*));
 
-      
+   // Assignment 2: reserve a new block before rebuilding the randomized
+   // queue when the current final block has no data slot left.
+   if (fs->end_idx == SCHED_BUF_LENGTH-1)
+   {
+      void *last_entry_arg_buf = fs->arg_block_end[fs->end_idx];
+      void **new_buf = calloc(SCHED_BUF_LENGTH,sizeof(void*));
       set_eba_arg(last_entry_arg_buf, 3, new_buf);
+
       fs->arg_block_end = new_buf;
-      fs->arg_block_end[0] = add_me;
-      fs->end_idx = 1;
+      fs->end_idx = 0;
 
       void *new_buf_last_entry = init_eba_arg(4);
       set_eba_arg(new_buf_last_entry, 0, fs->last_opl);
@@ -100,6 +91,56 @@ void add_to_sched(void *args)
       set_eba_arg(new_buf_last_entry, 3, NULL);
       fs->arg_block_end[SCHED_BUF_LENGTH-1] = new_buf_last_entry;
    }
+
+   // Assignment 2: flatten the linked queue, insert at a random position,
+   // and write the reordered continuations back into the existing blocks.
+   uint64_t old_length = fs->queue_length;
+   void **queued = malloc((old_length + 1) * sizeof(void *));
+   void **arg_block = fs->arg_block_next;
+   uint64_t block_idx = fs->next_idx;
+   uint64_t queued_idx = 0;
+
+   while (arg_block != fs->arg_block_end)
+   {
+      while (block_idx < SCHED_BUF_LENGTH-1)
+      {
+         queued[queued_idx++] = arg_block[block_idx++];
+      }
+      arg_block = get_eba_arg(arg_block[SCHED_BUF_LENGTH-1], 3);
+      block_idx = 0;
+   }
+   while (block_idx < fs->end_idx)
+   {
+      queued[queued_idx++] = arg_block[block_idx++];
+   }
+
+   uint64_t insert_idx = rand() % (old_length + 1);
+   for (uint64_t i = old_length; i > insert_idx; --i)
+   {
+      queued[i] = queued[i-1];
+   }
+   queued[insert_idx] = add_me;
+
+   arg_block = fs->arg_block_next;
+   block_idx = fs->next_idx;
+   queued_idx = 0;
+   while (arg_block != fs->arg_block_end)
+   {
+      while (block_idx < SCHED_BUF_LENGTH-1)
+      {
+         arg_block[block_idx++] = queued[queued_idx++];
+      }
+      arg_block = get_eba_arg(arg_block[SCHED_BUF_LENGTH-1], 3);
+      block_idx = 0;
+   }
+   while (queued_idx < old_length + 1)
+   {
+      arg_block[block_idx++] = queued[queued_idx++];
+   }
+   fs->end_idx = block_idx;
+   fs->queue_length += 1;
+
+   free(queued);
    free_eba_arg(args);
 }
 
@@ -115,6 +156,10 @@ void sched_run(void *args)
       // printf("running with next=%ld\n", fs->next_idx);
       if (fs->arg_block_next == NULL)
       {
+         if (fs->schedule_log != NULL)
+         {
+            fclose(fs->schedule_log);
+         }
          opl_destroy(fs->add_opl);
          opl_destroy(fs->last_opl);
          free(fs);
@@ -123,10 +168,27 @@ void sched_run(void *args)
       }
 
       // else:
-      void *next_eba_op = fs->arg_block_next[fs->next_idx];
+      // Assignment 2: dequeue one continuation and record its thread ID.
+      uint64_t current_idx = fs->next_idx;
+      void *next_eba_op = fs->arg_block_next[current_idx];
       fs->next_idx += 1;
       if (next_eba_op != NULL)
       {
+         if (current_idx != SCHED_BUF_LENGTH-1)
+         {
+            fs->queue_length -= 1;
+            if (fs->schedule_log != NULL)
+            {
+               struct timeval now;
+               gettimeofday(&now, NULL);
+               uintptr_t thread_id =
+                  (uintptr_t)get_eba_arg(next_eba_op, 3);
+               fprintf(fs->schedule_log, "%ld.%06ld,%lu\n",
+                       (long)now.tv_sec, (long)now.tv_usec,
+                       (unsigned long)thread_id);
+               fflush(fs->schedule_log);
+            }
+         }
          eba_op(next_eba_op);
       }
       else
@@ -135,4 +197,3 @@ void sched_run(void *args)
       }
    }
 }
-

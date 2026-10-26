@@ -12,11 +12,13 @@ void sched_noise(void* args)
    // 0: this operation
    // 1: the scheduler
    // 2: which iteration this operation is on (buffer containing the iteration)
+   // 3: the assignment 2 thread/continuation-chain ID
 
    int64_t *iterp = (int64_t*)get_eba_arg(args, 2);
    int64_t iter = *iterp;
    free(iterp);
    fifo_sched_t *fs = get_eba_arg(args, 1);
+   uintptr_t thread_id = (uintptr_t)get_eba_arg(args, 3);
 
 
    int i;
@@ -37,14 +39,23 @@ void sched_noise(void* args)
 
    for(i = 0; i < new_progs; i++)
    {
-      // build an eba arg that we'll be adding
-      void *my_next_iter = init_eba_arg(3);
+      // Assignment 2: reserve one extra argument for the chain ID.
+      // The first child stays on this chain; later children begin new chains.
+      void *my_next_iter = init_eba_arg(4);
       set_eba_arg(my_next_iter, 0, get_eba_arg(args, 0));
       set_eba_arg(my_next_iter, 1, fs);
       int64_t *next_iterp = malloc(sizeof(int64_t));
       *next_iterp = iter+1; // only let the first one reproduce
       *next_iterp += (i>0)*PASS_LENGTH; // others will have iter being too high.
       set_eba_arg(my_next_iter, 2, next_iterp);
+      if (i == 0)
+      {
+         set_eba_arg(my_next_iter, 3, (void *)thread_id);
+      }
+      else
+      {
+         set_eba_arg(my_next_iter, 3, (void *)(uintptr_t)fs->next_thread_id++);
+      }
 
 
       // now put it on the scheduler

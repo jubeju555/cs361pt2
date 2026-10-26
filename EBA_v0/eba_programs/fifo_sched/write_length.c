@@ -13,7 +13,8 @@ void write_length(void *args)
    // 0: this operation
    // 1: the scheduler
    // 2: the file pointer of the file to write to
-   // 3: a timeval struct stating when the first timestamp was collected
+   // 3: the thread ID
+   // 4: a timeval struct stating when the first timestamp was collected
    fifo_sched_t *fs = get_eba_arg(args, 1);
    FILE *logf = get_eba_arg(args, 2);
 
@@ -21,7 +22,7 @@ void write_length(void *args)
    long unsigned int usec_elapsed;
    struct timeval *nowp = malloc(sizeof(struct timeval));
    gettimeofday(nowp, NULL);
-   if(get_eba_arg(args, 3) == NULL)
+   if(get_eba_arg(args, 4) == NULL)
    {
       // first time called
       usec_elapsed = 0;
@@ -30,13 +31,15 @@ void write_length(void *args)
    else
    {
       // subsequent calls
-      struct timeval *thenp = (struct timeval *) get_eba_arg(args, 3);
+      struct timeval *thenp = (struct timeval *) get_eba_arg(args, 4);
       usec_elapsed = (nowp->tv_sec-thenp->tv_sec)*1000000 + nowp->tv_usec-thenp->tv_usec;
       free(thenp);
    }
-   set_eba_arg(args, 3, nowp);
+   set_eba_arg(args, 4, nowp);
 
 
+   // Assignment 2: retain the original queue-length output as a validation
+   // signal while the randomized scheduler is running.
    int sched_length;
    sched_length = 0;
 
