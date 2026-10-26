@@ -1,6 +1,8 @@
 # grab glfw
 include(FetchContent)
 
+option(EBA_BUILD_GRAPHICS "Build the optional OpenGL graphics module" ON)
+
 # Disable optional glfw targets
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -97,8 +99,11 @@ target_link_libraries(EIR
    PRIVATE
       eir_common
       eba_common
-      ${CMAKE_DL_LIBS}
-)
+      ${CMAKE_DL_LIBS})
+
+if(EBA_BUILD_GRAPHICS)
+   target_compile_definitions(EIR PRIVATE EBA_BUILD_GRAPHICS)
+endif()
 
 ################################################################################
 
@@ -273,17 +278,12 @@ target_link_libraries(EIR_log
 add_library(EIR_scaffold
    SHARED
       modules/scaffold.c
-      ${CMAKE_CURRENT_SOURCE_DIR}/tools/graphics/glad/src/gl.c
 )
 
 target_include_directories(EIR_scaffold
    PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}
-      ${CMAKE_CURRENT_SOURCE_DIR}/tools/graphics/glad/include
 )
-
-find_package(OpenGL REQUIRED)
-# find_package(glfw3 REQUIRED)
 
 set_target_properties(EIR_scaffold
    PROPERTIES
@@ -295,13 +295,18 @@ set_target_properties(EIR_scaffold
 
 target_link_libraries(EIR_scaffold
    PRIVATE
-      eba_common # links to eba_common
+      eba_common
       eir_common
-      glfw
-      OpenGL::GL
       ${CMAKE_DL_LIBS})
 
-# target_link_options(EIR_scaffold
-   # PRIVATE
-      # "-lglfw -lGL"
-# )
+if(EBA_BUILD_GRAPHICS)
+   target_sources(EIR_scaffold PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/tools/graphics/glad/src/gl.c
+   )
+   target_include_directories(EIR_scaffold PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/tools/graphics/glad/include
+   )
+   find_package(OpenGL REQUIRED)
+   target_link_libraries(EIR_scaffold PRIVATE glfw OpenGL::GL)
+   target_compile_definitions(EIR_scaffold PRIVATE EBA_BUILD_GRAPHICS)
+endif()

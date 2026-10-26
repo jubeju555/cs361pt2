@@ -4,8 +4,10 @@
 #include "eba_common.h"
 #include "eir_common.h"
 
+#ifdef EBA_BUILD_GRAPHICS
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
+#endif
 
 void run_scaffold(IR_state_t *IRstate, char **line)
 {
@@ -26,7 +28,7 @@ void run_scaffold(IR_state_t *IRstate, char **line)
       }
 
       assert(line[3] != NULL);
-      IRstate->vars[var_dest] = (uint64_t) full_read(line[3]);
+      IRstate->vars[var_dest] = (uint64_t)full_read(line[3]);
    }
    else if (match_second_word(line, "CODEFREE"))
    {
@@ -35,7 +37,7 @@ void run_scaffold(IR_state_t *IRstate, char **line)
       {
          var_errmsg("SCAFFOLD CODEFREE", IRstate->next_line);
       }
-      full_free((char***)IRstate->vars[var_dest]);
+      full_free((char ***)IRstate->vars[var_dest]);
    }
    else if (match_second_word(line, "TERMINATE_WITH_CODEFREE"))
    {
@@ -45,7 +47,7 @@ void run_scaffold(IR_state_t *IRstate, char **line)
       {
          var_errmsg("SCAFFOLD TERMINATE_WITH_CODEFREE", IRstate->next_line);
       }
-      full_free((char***)IRstate->vars[var_dest]);
+      full_free((char ***)IRstate->vars[var_dest]);
       EIR_data_t *gd = get_eba_arg(eba_args[IRstate->w_thread], 1);
       set_eba_arg(eba_args[IRstate->w_thread], 0, gd->opls[4]);
    }
@@ -58,7 +60,7 @@ void run_scaffold(IR_state_t *IRstate, char **line)
       }
       void *psem = malloc(sizeof(sem_t));
       sem_init(psem, 0, 0);
-      IRstate->vars[var_dest] = (int64_t) psem;
+      IRstate->vars[var_dest] = (int64_t)psem;
    }
    else if (match_second_word(line, "P_SEM_WAIT"))
    {
@@ -67,7 +69,7 @@ void run_scaffold(IR_state_t *IRstate, char **line)
       {
          var_errmsg("SCAFFOLD P_SEM_WAIT", IRstate->next_line);
       }
-      void *psem = (void*) IRstate->vars[var_dest];
+      void *psem = (void *)IRstate->vars[var_dest];
       sem_wait(psem);
    }
    else if (match_second_word(line, "P_SEM_POST"))
@@ -77,7 +79,7 @@ void run_scaffold(IR_state_t *IRstate, char **line)
       {
          var_errmsg("SCAFFOLD P_SEM_POST", IRstate->next_line);
       }
-      void *psem = (void*) IRstate->vars[var_dest];
+      void *psem = (void *)IRstate->vars[var_dest];
       sem_post(psem);
    }
    else if (match_second_word(line, "P_SEM_FREE"))
@@ -87,7 +89,7 @@ void run_scaffold(IR_state_t *IRstate, char **line)
       {
          var_errmsg("SCAFFOLD P_SEM_FREE", IRstate->next_line);
       }
-      void *psem = (void*) IRstate->vars[var_dest];
+      void *psem = (void *)IRstate->vars[var_dest];
       sem_destroy(psem);
       free(psem);
    }
@@ -100,7 +102,7 @@ void run_scaffold(IR_state_t *IRstate, char **line)
       }
       void *plock = malloc(sizeof(pthread_mutex_t));
       pthread_mutex_init(plock, NULL);
-      IRstate->vars[var_dest] = (int64_t) plock;
+      IRstate->vars[var_dest] = (int64_t)plock;
    }
    else if (match_second_word(line, "P_LOCK_ACK"))
    {
@@ -109,7 +111,7 @@ void run_scaffold(IR_state_t *IRstate, char **line)
       {
          var_errmsg("SCAFFOLD P_LOCK_ACK", IRstate->next_line);
       }
-      void *plock = (void*) IRstate->vars[var_dest];
+      void *plock = (void *)IRstate->vars[var_dest];
       pthread_mutex_lock(plock);
    }
    else if (match_second_word(line, "P_LOCK_REL"))
@@ -119,7 +121,7 @@ void run_scaffold(IR_state_t *IRstate, char **line)
       {
          var_errmsg("SCAFFOLD P_LOCK_REL", IRstate->next_line);
       }
-      void *plock = (void*) IRstate->vars[var_dest];
+      void *plock = (void *)IRstate->vars[var_dest];
       pthread_mutex_unlock(plock);
    }
    else if (match_second_word(line, "P_LOCK_FREE"))
@@ -129,7 +131,7 @@ void run_scaffold(IR_state_t *IRstate, char **line)
       {
          var_errmsg("SCAFFOLD P_LOCK_FREE", IRstate->next_line);
       }
-      void *plock = (void*) IRstate->vars[var_dest];
+      void *plock = (void *)IRstate->vars[var_dest];
       pthread_mutex_destroy(plock);
       free(plock);
    }
@@ -169,7 +171,7 @@ void run_scaffold(IR_state_t *IRstate, char **line)
       if (w_thread >= MAX_THREADS)
       {
          fprintf(stderr, "error: thread %lu not allowed (max is %d). Stop.\n",
-                  w_thread, MAX_THREADS-1);
+                 w_thread, MAX_THREADS - 1);
          exit(1);
       }
 
@@ -180,8 +182,8 @@ void run_scaffold(IR_state_t *IRstate, char **line)
       }
 
       void *targ = malloc(sizeof(uint64_t));
-      *((uint64_t*)targ) = w_thread; // will be free-ed later
-      
+      *((uint64_t *)targ) = w_thread; // will be free-ed later
+
       pthread_t tids[1];
 
       gd_new->my_thread = w_thread; // remember, gd_new is in eba_arg
@@ -191,23 +193,22 @@ void run_scaffold(IR_state_t *IRstate, char **line)
       pthread_create(tids, NULL, EBA_run_wrap, targ);
       pthread_detach(tids[0]);
 
-
       buf_free_if_shorthand(arg_buf, line[2]);
       pthread_mutex_unlock(&interpreter_lock);
    }
    else if (match_second_word(line, "PTHREAD_GET_TID"))
    {
       void *tid_buf = parse_var_buf(line[2], IRstate);
-      
-      *((uint64_t*)tid_buf) = IRstate->w_thread;
+
+      *((uint64_t *)tid_buf) = IRstate->w_thread;
 
       buf_free_if_shorthand(tid_buf, line[2]);
    }
    else if (match_second_word(line, "GET_NODEID"))
    {
       void *tid_buf = parse_var_buf(line[2], IRstate);
-      
-      *((uint64_t*)tid_buf) = IRstate->w_node;
+
+      *((uint64_t *)tid_buf) = IRstate->w_node;
 
       buf_free_if_shorthand(tid_buf, line[2]);
    }
@@ -215,18 +216,19 @@ void run_scaffold(IR_state_t *IRstate, char **line)
    {
       pthread_mutex_lock(&interpreter_lock);
       void *avl_buf = parse_var_buf(line[2], IRstate);
-      
+
       uint64_t w_thread = get_avail_w_thread();
       if (w_thread == (uint64_t)(-1))
       {
          fprintf(stderr, "no available thread! You're probably going to segfault.\n");
       }
 
-      *((uint64_t*)avl_buf) = w_thread;
+      *((uint64_t *)avl_buf) = w_thread;
 
       buf_free_if_shorthand(avl_buf, line[2]);
       pthread_mutex_unlock(&interpreter_lock);
    }
+#ifdef EBA_BUILD_GRAPHICS
    else if (match_second_word(line, "GLFW_INIT"))
    {
       int var_window = parse_variable(line[2]);
@@ -271,7 +273,7 @@ void run_scaffold(IR_state_t *IRstate, char **line)
 
       glClearColor(0.6f, 0.6f, 0.8f, 1.0f);
 
-      IRstate->vars[var_window] = (int64_t) window;
+      IRstate->vars[var_window] = (int64_t)window;
    }
    else if (match_second_word(line, "GLFW_TERMINATE"))
    {
@@ -290,10 +292,10 @@ void run_scaffold(IR_state_t *IRstate, char **line)
       {
          var_errmsg("SCAFFOLD GLFW_WINDOWSHOULDCLOSE", IRstate->next_line);
       }
-      
-      GLFWwindow *window = (GLFWwindow *) IRstate->vars[var_window];
-      int64_t *shouldclose = (int64_t*) IRstate->vars[var_shouldclose];
-      *shouldclose = (int64_t) glfwWindowShouldClose(window);
+
+      GLFWwindow *window = (GLFWwindow *)IRstate->vars[var_window];
+      int64_t *shouldclose = (int64_t *)IRstate->vars[var_shouldclose];
+      *shouldclose = (int64_t)glfwWindowShouldClose(window);
    }
    else if (match_second_word(line, "GLFW_POLLEVENTS"))
    {
@@ -310,9 +312,8 @@ void run_scaffold(IR_state_t *IRstate, char **line)
       {
          var_errmsg("SCAFFOLD GLFW_SWAPBUFFERS", IRstate->next_line);
       }
-      GLFWwindow *window = (GLFWwindow *) IRstate->vars[var_window];
+      GLFWwindow *window = (GLFWwindow *)IRstate->vars[var_window];
       glfwSwapBuffers(window);
-
    }
    else if (match_second_word(line, "GLFW_MAKEVAO"))
    {
@@ -327,16 +328,16 @@ void run_scaffold(IR_state_t *IRstate, char **line)
          var_errmsg("SCAFFOLD GLFW_SWAPBUFFERS", IRstate->next_line);
       }
 
-      double *data = (double *) IRstate->vars[var_data];
+      double *data = (double *)IRstate->vars[var_data];
 
       GLuint vbo = 0;
       glGenBuffers(1, &vbo);
       glBindBuffer(GL_ARRAY_BUFFER, vbo);
-      glBufferData(GL_ARRAY_BUFFER, 9*sizeof(double), data, GL_STATIC_DRAW);
+      glBufferData(GL_ARRAY_BUFFER, 9 * sizeof(double), data, GL_STATIC_DRAW);
 
       // for(int i = 0; i < 3; i++)
       // {
-         // printf("points[%d]: %lf %lf %lf\n", i, data[3*i+0], data[3*i+1], data[3*i+2]);
+      // printf("points[%d]: %lf %lf %lf\n", i, data[3*i+0], data[3*i+1], data[3*i+2]);
       // }
       // printf("\n");
 
@@ -347,7 +348,7 @@ void run_scaffold(IR_state_t *IRstate, char **line)
       glBindBuffer(GL_ARRAY_BUFFER, vbo);
       glVertexAttribPointer(0, 3, GL_DOUBLE, GL_FALSE, 0, NULL);
 
-      IRstate->vars[var_vao] = (int64_t) vao;
+      IRstate->vars[var_vao] = (int64_t)vao;
    }
    else if (match_second_word(line, "GLFW_MAKESHADERPROG"))
    {
@@ -371,7 +372,7 @@ void run_scaffold(IR_state_t *IRstate, char **line)
       fseek(fp, 0, SEEK_END);
       flen = ftell(fp);
       fseek(fp, 0, SEEK_SET);
-      char *vertex_shader = malloc(flen+1);
+      char *vertex_shader = malloc(flen + 1);
       chars_read = fread(vertex_shader, 1, flen, fp);
       if (chars_read != flen)
       {
@@ -392,7 +393,7 @@ void run_scaffold(IR_state_t *IRstate, char **line)
       fseek(fp, 0, SEEK_END);
       flen = ftell(fp);
       fseek(fp, 0, SEEK_SET);
-      char *fragment_shader = malloc(flen+1);
+      char *fragment_shader = malloc(flen + 1);
       chars_read = fread(fragment_shader, 1, flen, fp);
       if (chars_read != flen)
       {
@@ -406,11 +407,11 @@ void run_scaffold(IR_state_t *IRstate, char **line)
       // printf("%s\n", fragment_shader);
 
       GLuint vs = glCreateShader(GL_VERTEX_SHADER);
-      glShaderSource(vs, 1, (const char**) &vertex_shader, NULL);
+      glShaderSource(vs, 1, (const char **)&vertex_shader, NULL);
       glCompileShader(vs);
 
       GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
-      glShaderSource(fs, 1, (const char**) &fragment_shader, NULL);
+      glShaderSource(fs, 1, (const char **)&fragment_shader, NULL);
       glCompileShader(fs);
 
       GLuint shader_program = glCreateProgram();
@@ -418,7 +419,7 @@ void run_scaffold(IR_state_t *IRstate, char **line)
       glAttachShader(shader_program, vs);
       glLinkProgram(shader_program);
 
-      IRstate->vars[var_prog] = (int64_t) shader_program;
+      IRstate->vars[var_prog] = (int64_t)shader_program;
       // printf("value of shader program? %d\n", shader_program);
 
       free(vertex_shader);
@@ -432,7 +433,7 @@ void run_scaffold(IR_state_t *IRstate, char **line)
          var_errmsg("SCAFFOLD GLFW_USESHADERPROG", IRstate->next_line);
       }
 
-      GLuint shader_program = (GLuint) IRstate->vars[var_prog];
+      GLuint shader_program = (GLuint)IRstate->vars[var_prog];
       // printf("size of GLuint? %lu\n", sizeof(GLuint));
       // printf("value of shader program? %u\n", shader_program);
       glUseProgram(shader_program);
@@ -445,16 +446,17 @@ void run_scaffold(IR_state_t *IRstate, char **line)
          var_errmsg("SCAFFOLD GLFW_DRAWVAOTRIANGLES", IRstate->next_line);
       }
 
-      GLuint vao = (GLuint) IRstate->vars[var_vao];
+      GLuint vao = (GLuint)IRstate->vars[var_vao];
       glBindVertexArray(vao);
       glDrawArrays(GL_TRIANGLES, 0, 3);
       glDrawArrays(GL_POINTS, 0, 3);
    }
+#endif
    else
    {
       fprintf(stderr, "error: option %s does not exist for SCAFFOLD\n", line[1]);
    }
-   
+
    // printf("exiting scaffold func!\n");
 
    IRstate->next_line += 1;
