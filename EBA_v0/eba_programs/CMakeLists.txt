@@ -37,6 +37,24 @@ target_link_libraries(sched_demo
       ${CMAKE_DL_LIBS}
 )
 
+add_library(rand_sched_demo
+   SHARED
+      rand_sched_demo.c)
+
+set_target_properties(rand_sched_demo
+   PROPERTIES
+      OUTPUT_NAME "rand_sched_demo"
+      PREFIX ""
+      SUFFIX ".so"
+)
+
+target_link_libraries(rand_sched_demo
+   PRIVATE
+      fifo_sched
+      eba_common # links to eba_common
+      ${CMAKE_DL_LIBS}
+)
+
 
 add_library(circ_buf_demo
    SHARED
