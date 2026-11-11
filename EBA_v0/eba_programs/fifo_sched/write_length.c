@@ -59,6 +59,18 @@ void write_length(void *args)
    // The final block only has queued items through end_idx.
    sched_length += fs->end_idx - block_idx;
 
+   // SOLUTION
+   void **which_block;
+   int num_iters = 0;
+   for(which_block = fs->arg_block_next; which_block != NULL; )
+   {
+      num_iters += 1;
+      void *final_arg = which_block[SCHED_BUF_LENGTH-1];
+      which_block = (void**)get_eba_arg(final_arg, 3);
+   }
+   // the number of extra iterations will be (SCHED_BUF_LENGTH-1) extra entries
+   sched_length = (num_iters-1)*(SCHED_BUF_LENGTH-1) + fs->end_idx - fs->next_idx;
+
    // now write the length to file
    fprintf(logf, "%lu,%d\n", usec_elapsed, sched_length);
 

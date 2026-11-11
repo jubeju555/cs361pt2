@@ -197,3 +197,34 @@ void sched_run(void *args)
       }
    }
 }
+void sched_run_random(void *args)
+{
+   // this is a copy of sched_run. You'll have to change it to randomized
+   // dequeue
+   fifo_sched_t *fs = get_eba_arg(args, 1);
+
+   while(1)
+   {
+      // printf("running with next=%ld\n", fs->next_idx);
+      if (fs->arg_block_next == NULL)
+      {
+         opl_destroy(fs->add_opl);
+         opl_destroy(fs->last_opl);
+         free(fs);
+         printf("scheduler exit: success\n");
+         return;
+      }
+
+      // else:
+      void *next_eba_op = fs->arg_block_next[fs->next_idx];
+      fs->next_idx += 1;
+      if (next_eba_op != NULL)
+      {
+         eba_op(next_eba_op);
+      }
+      else
+      {
+         ; // pass
+      }
+   }
+}
